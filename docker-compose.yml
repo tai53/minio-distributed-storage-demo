@@ -1,0 +1,77 @@
+version: "3.8"
+
+# MinIO Distributed Mode - 4 node, dùng erasure coding để chịu lỗi
+# Truy cập Console: http://localhost:9001 (đăng nhập bằng MINIO_ROOT_USER/PASSWORD trong .env)
+
+services:
+  minio1:
+    image: minio/minio:latest
+    hostname: minio1
+    volumes:
+      - data1:/data
+    env_file: .env
+    command: server http://minio{1...4}/data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  minio2:
+    image: minio/minio:latest
+    hostname: minio2
+    volumes:
+      - data2:/data
+    env_file: .env
+    command: server http://minio{1...4}/data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  minio3:
+    image: minio/minio:latest
+    hostname: minio3
+    volumes:
+      - data3:/data
+    env_file: .env
+    command: server http://minio{1...4}/data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  minio4:
+    image: minio/minio:latest
+    hostname: minio4
+    volumes:
+      - data4:/data
+    env_file: .env
+    command: server http://minio{1...4}/data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  nginx:
+    image: nginx:latest
+    hostname: nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    depends_on:
+      - minio1
+      - minio2
+      - minio3
+      - minio4
+
+volumes:
+  data1:
+  data2:
+  data3:
+  data4:
