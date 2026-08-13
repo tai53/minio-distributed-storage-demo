@@ -1,1 +1,0 @@
-Day la file test cho de tai MinIO distributed storage.
