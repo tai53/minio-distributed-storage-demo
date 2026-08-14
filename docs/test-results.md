@@ -12,7 +12,7 @@
 
 | Node bị tắt | Số node còn lại | Upload/Download có thành công? | Ghi chú |
 |---|---|---|---|
-| minio2 | 3/4 | | |
+| minio2 | 3/4 | ✅ Thành công | Upload/download bình thường |
 | minio2 + minio3 | 2/4 | | |
 
 ## 3. Nhận xét
