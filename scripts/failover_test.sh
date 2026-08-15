@@ -15,7 +15,7 @@ docker compose stop "$NODE_TO_STOP"
 
 echo ""
 echo "===== BƯỚC 3: Kiểm tra hệ thống vẫn hoạt động (upload/download) ====="
-python3 scripts/upload_download.py
+python scripts/upload_download.py
 
 echo ""
 echo "===== BƯỚC 4: Khởi động lại node $NODE_TO_STOP ====="
