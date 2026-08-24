@@ -2,17 +2,21 @@ version: "3.8"
 
 # MinIO Distributed Mode - 4 node, dùng erasure coding để chịu lỗi
 # Truy cập Console: http://localhost:9001 (đăng nhập bằng MINIO_ROOT_USER/PASSWORD trong .env)
+# Network: MinIO nodes chi giao tiep noi bo; Nginx la "cua ngao" duy nhat
 
 services:
   minio1:
     image: minio/minio:latest
     hostname: minio1
+    networks:
+      - minio-internal
     volumes:
       - data1:/data
+      - ./certs:/root/.minio/certs:ro
     env_file: .env
-    command: server http://minio{1...4}/data --console-address ":9001"
+    command: server https://minio{1...4}/data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -20,12 +24,15 @@ services:
   minio2:
     image: minio/minio:latest
     hostname: minio2
+    networks:
+      - minio-internal
     volumes:
       - data2:/data
+      - ./certs:/root/.minio/certs:ro
     env_file: .env
-    command: server http://minio{1...4}/data --console-address ":9001"
+    command: server https://minio{1...4}/data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -33,12 +40,15 @@ services:
   minio3:
     image: minio/minio:latest
     hostname: minio3
+    networks:
+      - minio-internal
     volumes:
       - data3:/data
+      - ./certs:/root/.minio/certs:ro
     env_file: .env
-    command: server http://minio{1...4}/data --console-address ":9001"
+    command: server https://minio{1...4}/data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -46,12 +56,15 @@ services:
   minio4:
     image: minio/minio:latest
     hostname: minio4
+    networks:
+      - minio-internal
     volumes:
       - data4:/data
+      - ./certs:/root/.minio/certs:ro
     env_file: .env
-    command: server http://minio{1...4}/data --console-address ":9001"
+    command: server https://minio{1...4}/data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -59,8 +72,12 @@ services:
   nginx:
     image: nginx:latest
     hostname: nginx
+    networks:
+      - minio-internal
+      - public
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -75,3 +92,10 @@ volumes:
   data2:
   data3:
   data4:
+
+networks:
+  minio-internal:
+    driver: bridge
+    internal: true   # Khong co Internet access
+  public:
+    driver: bridge

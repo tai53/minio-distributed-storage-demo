@@ -5,3 +5,5 @@
 .vscode/
 test_upload.txt
 downloaded_test_upload.txt
+certs/
+downloads.zip
