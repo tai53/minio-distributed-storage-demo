@@ -5,11 +5,8 @@ Usage:
     python scripts/multiple-upload_download.py upload
     python scripts/multiple-upload_download.py download
     python scripts/multiple-upload_download.py both
-<<<<<<< HEAD
-=======
     python scripts/multiple-upload_download.py both --files video.mp4 image.jpg large.zip
     python scripts/multiple-upload_download.py both --sizes 10 50 100 500
->>>>>>> 4b6ab05ecba3aaa69e7b6884f091cd728c70339d
 
 Note:
     Download mac dinh dong goi cac file da tai thanh downloads.zip.
@@ -80,7 +77,8 @@ def ensure_bucket(client: Minio, bucket: str) -> None:
 # TEST FILES
 # ============================================================
 
-def create_test_files() -> list[dict]:
+def create_test_files(sizes: list[int] = None) -> list[dict]:
+    """Tao file test mac dinh. sizes = list kich thuoc MB can tao."""
     files = []
 
     txt = Path("test_small.txt")
@@ -97,14 +95,34 @@ def create_test_files() -> list[dict]:
     json_file.write_text(data, encoding="utf-8")
     files.append({"path": str(json_file), "desc": "JSON 16KB"})
 
-    bin_1mb = Path("test_1mb.bin")
-    bin_1mb.write_bytes(os.urandom(1024 * 1024))
-    files.append({"path": str(bin_1mb), "desc": "BIN 1MB"})
+    # Default sizes: 1MB, 10MB
+    default_sizes = [1, 10]
+    all_sizes = default_sizes + (sizes or [])
 
-    bin_10mb = Path("test_10mb.bin")
-    bin_10mb.write_bytes(os.urandom(10 * 1024 * 1024))
-    files.append({"path": str(bin_10mb), "desc": "BIN 10MB"})
+    for mb in all_sizes:
+        bin_file = Path(f"test_{mb}mb.bin")
+        bin_file.write_bytes(os.urandom(mb * 1024 * 1024))
+        files.append({"path": str(bin_file), "desc": f"BIN {mb}MB"})
 
+    return files
+
+
+def load_custom_files(paths: list[str]) -> list[dict]:
+    """Load file tu duong dan tuy chinh."""
+    files = []
+    for p in paths:
+        path = Path(p)
+        if not path.exists():
+            print(f"[WARN] File not found: {p}")
+            continue
+        size = path.stat().st_size
+        if size < 1024 * 1024:
+            size_str = f"{size/1024:.1f}KB"
+        elif size < 1024 * 1024 * 1024:
+            size_str = f"{size/(1024*1024):.1f}MB"
+        else:
+            size_str = f"{size/(1024*1024*1024):.2f}GB"
+        files.append({"path": str(path), "desc": f"{path.name} ({size_str})"})
     return files
 
 
@@ -222,6 +240,14 @@ def parse_args() -> argparse.Namespace:
         choices=["upload", "download", "both"],
         help="upload = upload only, download = download only, both = upload + download + verify"
     )
+    parser.add_argument(
+        "--files", nargs="+", metavar="PATH",
+        help="Custom files to test (e.g. --files video.mp4 photo.jpg backup.tar.gz)"
+    )
+    parser.add_argument(
+        "--sizes", nargs="+", type=int, metavar="MB",
+        help="Additional binary file sizes in MB (e.g. --sizes 50 100 500)"
+    )
     return parser.parse_args()
 
 
@@ -236,7 +262,17 @@ def main() -> None:
 
     try:
         ensure_bucket(client, config.bucket)
-        files = create_test_files()
+
+        # Merge default + custom files
+        files = create_test_files(sizes=args.sizes)
+        if args.files:
+            files.extend(load_custom_files(args.files))
+
+        if not files:
+            print("[ERROR] No files to test")
+            return
+
+        print(f"\n[INFO] {len(files)} files to test")
         results = []
 
         if args.command in ("upload", "both"):
@@ -251,12 +287,13 @@ def main() -> None:
             results.extend(download_results)
             print_report(download_results)
 
-            zip_name = zip_downloads(files)
-            raw_size = sum(os.path.getsize(f["path"]) for f in files)
-            zip_size = os.path.getsize(zip_name)
-            saved = (1 - zip_size / raw_size) * 100 if raw_size else 0
-            print(f"\n[OK] Zipped {len(files)} file -> {zip_name} "
-                  f"({zip_size/1024:.1f}KB / {raw_size/1024:.1f}KB, giam {saved:.0f}%)")
+            if not args.files:  # zip only default files
+                zip_name = zip_downloads(files)
+                raw_size = sum(os.path.getsize(f["path"]) for f in files)
+                zip_size = os.path.getsize(zip_name)
+                saved = (1 - zip_size / raw_size) * 100 if raw_size else 0
+                print(f"\n[OK] Zipped {len(files)} file -> {zip_name} "
+                      f"({zip_size/1024:.1f}KB / {raw_size/1024:.1f}KB, giam {saved:.0f}%)")
 
         if args.command == "both":
             print("\n--- VERIFY ---")
